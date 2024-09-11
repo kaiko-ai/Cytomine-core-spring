@@ -70,8 +70,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.hibernate.engine.query.spi.OrdinalParameterDescriptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.data.repository.query.Parameter;
 import org.springframework.security.acls.domain.BasePermission;
 import org.springframework.stereotype.Service;
 
@@ -86,7 +88,6 @@ import java.util.stream.Collectors;
 
 import static be.cytomine.service.social.ImageConsultationService.DATABASE_NAME;
 import static com.mongodb.client.model.Aggregates.*;
-import static com.mongodb.client.model.Aggregates.sort;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.gte;
 import static com.mongodb.client.model.Sorts.ascending;
@@ -227,7 +228,7 @@ public class ProjectService extends ModelService {
 
         List<Document> results = persistentImageConsultation.aggregate(requests)
                 .into(new ArrayList<>());
-
+        
 
         List<Map<String, Object>> data = results.stream().map(x -> JsonObject.of("id", x.get("_id"), "date", x.get("date"), "opened", true))
                 .collect(Collectors.toList());
@@ -327,13 +328,19 @@ public class ProjectService extends ModelService {
         String members = sqlSearchConditions.getData().stream().filter(x -> x.getProperty().startsWith("members.")).map(x -> x.getSql()).collect(Collectors.joining(" AND "));
         String tags = sqlSearchConditions.getData().stream().filter(x -> x.getProperty().startsWith("t.")).map(x -> x.getSql()).collect(Collectors.joining(" AND "));
 
+        // Just quick fix to avoid injections
+        Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("id", "name", "created", "updated", "ontology_name", "currentUserRole", "membersCount", "lastActivity", "numberOfImages", "numberOfAnnotations", "numberOfJobAnnotations", "numberOfReviewedAnnotations"));
+
+        if (!allowedSortColumns.contains(sortColumn)) {
+            sortColumn = "created";
+        }
+
         if (!members.isBlank() && !projectSearchExtension.isWithMembersCount()) {
             throw new WrongArgumentException("Cannot search on members attributes without argument withMembersCount");
         }
 
         String select, from, where, search, sort;
         String request;
-
         if (user!=null) {
             select = "SELECT DISTINCT p.* ";
             from = "FROM project p " +
@@ -443,8 +450,11 @@ public class ProjectService extends ModelService {
                 sortColumn ="p."+sortColumn.replaceAll("numberOf", "count").replaceAll(regex, replacement).toLowerCase();
                 break;
         }
+        // ... (query building logic)
 
-        sort = " ORDER BY "+sortColumn;
+        sort = " ORDER BY " + sortColumn;
+
+        
         sort += (sortDirection.equals("desc")) ? " DESC " : " ASC ";
         sort += (sortDirection.equals("desc")) ? " NULLS LAST " : " NULLS FIRST ";
 
@@ -457,7 +467,6 @@ public class ProjectService extends ModelService {
             request += " OFFSET " + offset;
         }
 
-        log.debug(request);
         Query query = getEntityManager().createNativeQuery(request, Tuple.class);
         Map<String, Object> mapParams = sqlSearchConditions.getSqlParameters();
         for (Map.Entry<String, Object> entry : mapParams.entrySet()) {
