@@ -1,5 +1,38 @@
 package be.cytomine.service.security;
 
+import static org.springframework.security.acls.domain.BasePermission.ADMINISTRATION;
+import static org.springframework.security.acls.domain.BasePermission.READ;
+import static org.springframework.security.acls.domain.BasePermission.WRITE;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import javax.persistence.Query;
+import javax.persistence.Tuple;
+import javax.persistence.TupleElement;
+
+import org.apache.commons.lang3.time.DateUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ReflectionUtils;
+
 /*
 * Copyright (c) 2009-2022. Authors: see NOTICE file.
 *
@@ -17,19 +50,35 @@ package be.cytomine.service.security;
 */
 
 import be.cytomine.domain.CytomineDomain;
-import be.cytomine.domain.command.*;
+import be.cytomine.domain.command.AddCommand;
+import be.cytomine.domain.command.Command;
+import be.cytomine.domain.command.DeleteCommand;
+import be.cytomine.domain.command.EditCommand;
+import be.cytomine.domain.command.Transaction;
 import be.cytomine.domain.image.ImageInstance;
 import be.cytomine.domain.image.server.Storage;
-import be.cytomine.domain.ontology.*;
+import be.cytomine.domain.ontology.AlgoAnnotation;
+import be.cytomine.domain.ontology.AlgoAnnotationTerm;
+import be.cytomine.domain.ontology.AnnotationTerm;
+import be.cytomine.domain.ontology.Ontology;
+import be.cytomine.domain.ontology.ReviewedAnnotation;
+import be.cytomine.domain.ontology.UserAnnotation;
 import be.cytomine.domain.project.Project;
 import be.cytomine.domain.project.ProjectDefaultLayer;
 import be.cytomine.domain.project.ProjectRepresentativeUser;
-import be.cytomine.domain.security.*;
+import be.cytomine.domain.security.Language;
+import be.cytomine.domain.security.SecUser;
+import be.cytomine.domain.security.SecUserSecRole;
+import be.cytomine.domain.security.User;
+import be.cytomine.domain.security.UserJob;
 import be.cytomine.domain.social.LastConnection;
-import be.cytomine.domain.social.PersistentProjectConnection;
 import be.cytomine.dto.AuthInformation;
 import be.cytomine.dto.NamedCytomineDomain;
-import be.cytomine.exceptions.*;
+import be.cytomine.exceptions.AlreadyExistException;
+import be.cytomine.exceptions.ConstraintException;
+import be.cytomine.exceptions.CytomineMethodNotYetImplementedException;
+import be.cytomine.exceptions.ObjectNotFoundException;
+import be.cytomine.exceptions.WrongArgumentException;
 import be.cytomine.repository.command.CommandHistoryRepository;
 import be.cytomine.repository.command.CommandRepository;
 import be.cytomine.repository.command.RedoStackItemRepository;
@@ -38,11 +87,21 @@ import be.cytomine.repository.image.ImageInstanceRepository;
 import be.cytomine.repository.image.NestedImageInstanceRepository;
 import be.cytomine.repository.image.UploadedFileRepository;
 import be.cytomine.repository.image.server.StorageRepository;
-import be.cytomine.repository.ontology.*;
+import be.cytomine.repository.ontology.AlgoAnnotationRepository;
+import be.cytomine.repository.ontology.AlgoAnnotationTermRepository;
+import be.cytomine.repository.ontology.AnnotationIndexRepository;
+import be.cytomine.repository.ontology.AnnotationTermRepository;
+import be.cytomine.repository.ontology.OntologyRepository;
+import be.cytomine.repository.ontology.ReviewedAnnotationRepository;
+import be.cytomine.repository.ontology.UserAnnotationRepository;
 import be.cytomine.repository.project.ProjectDefaultLayerRepository;
 import be.cytomine.repository.project.ProjectRepository;
 import be.cytomine.repository.project.ProjectRepresentativeUserRepository;
-import be.cytomine.repository.security.*;
+import be.cytomine.repository.security.AclRepository;
+import be.cytomine.repository.security.SecRoleRepository;
+import be.cytomine.repository.security.SecUserRepository;
+import be.cytomine.repository.security.SecUserSecRoleRepository;
+import be.cytomine.repository.security.UserRepository;
 import be.cytomine.repositorynosql.social.AnnotationActionRepository;
 import be.cytomine.repositorynosql.social.LastConnectionRepository;
 import be.cytomine.repositorynosql.social.PersistentImageConsultationRepository;
@@ -54,7 +113,12 @@ import be.cytomine.service.PermissionService;
 import be.cytomine.service.dto.JobLayerDTO;
 import be.cytomine.service.image.ImageInstanceService;
 import be.cytomine.service.image.server.StorageService;
-import be.cytomine.service.ontology.*;
+import be.cytomine.service.ontology.AlgoAnnotationService;
+import be.cytomine.service.ontology.AlgoAnnotationTermService;
+import be.cytomine.service.ontology.AnnotationTermService;
+import be.cytomine.service.ontology.OntologyService;
+import be.cytomine.service.ontology.ReviewedAnnotationService;
+import be.cytomine.service.ontology.UserAnnotationService;
 import be.cytomine.service.project.ProjectDefaultLayerService;
 import be.cytomine.service.project.ProjectRepresentativeUserService;
 import be.cytomine.service.project.ProjectService;
@@ -62,26 +126,13 @@ import be.cytomine.service.search.UserSearchExtension;
 import be.cytomine.service.social.ImageConsultationService;
 import be.cytomine.service.social.ProjectConnectionService;
 import be.cytomine.service.social.UserPositionService;
-import be.cytomine.utils.*;
+import be.cytomine.utils.CommandResponse;
+import be.cytomine.utils.JsonObject;
+import be.cytomine.utils.PageUtils;
+import be.cytomine.utils.SQLUtils;
+import be.cytomine.utils.Task;
 import be.cytomine.utils.filters.SearchParameterEntry;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.time.DateUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.ReflectionUtils;
-
-import javax.persistence.Query;
-import javax.persistence.Tuple;
-import javax.persistence.TupleElement;
-import java.math.BigInteger;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static org.springframework.security.acls.domain.BasePermission.*;
 
 @Slf4j
 @Service
@@ -292,12 +343,13 @@ public class SecUserService extends ModelService {
 
         securityACLService.checkGuest(currentUserService.getCurrentUser());
 
-        if (sortColumn == null) {
+        // Just quick fix to avoid injections
+        Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("username", "firstname", "lastname", "email", "id", "role", "fullName"));
+        if (sortColumn == null || !allowedSortColumns.contains(sortColumn)) {
             sortColumn = "username";
         }
-        if (sortDirection == null) {
-            sortDirection = "asc";
-        }
+        String sortDir = sortDirection.toLowerCase().equals("desc") ? " DESC " : " ASC ";
+
         if (sortColumn.equals("role") && !userSearchExtension.isWithRoles()) {
             throw new WrongArgumentException("Cannot sort on user role without argument withRoles");
         }
@@ -332,12 +384,12 @@ public class SecUserService extends ModelService {
         }
 
         if (sortColumn.equals("role")) {
-            sort = "ORDER BY " + sortColumn + " " + sortDirection + ", u.id ASC ";
+            sort = "ORDER BY role " + sortDir + ", u.id ASC ";
         } else if (sortColumn.equals("fullName")) {
-            sort = "ORDER BY u.firstname " + sortDirection + ", u.id ";
+            sort = "ORDER BY u.firstname " + sortDir + ", u.id ";
         } else if (!sortColumn.equals("id")) { //avoid random sort when multiple values of the
-            sort = "ORDER BY u." + sortColumn + " " + sortDirection + ", u.id ";
-        } else sort = "ORDER BY u." + sortColumn + " " + sortDirection + " ";
+            sort = "ORDER BY u.?1 " + sortDir + ", u.id ";
+        } else sort = "ORDER BY u.id " + sortDir + " ";
 
         String request = select + from + where + search + groupBy + sort;
 
@@ -349,7 +401,6 @@ public class SecUserService extends ModelService {
         }
 
         Query query = getEntityManager().createNativeQuery(request, Tuple.class);
-//        Map<String, Object> mapParams = sqlSearchConditions.getSqlParameters();
         for (Map.Entry<String, Object> entry : mapParams.entrySet()) {
             query.setParameter(entry.getKey(), entry.getValue());
         }
@@ -524,17 +575,14 @@ public class SecUserService extends ModelService {
         String groupBy = "";
         String order = "";
         String having = "";
+        String sortDir = sortDirection.toLowerCase().equals("desc") ? " DESC " : " ASC ";
 
         if (multiSearch.isPresent()) {
             String value = ((String) multiSearch.get().getValue()).toLowerCase();
             where += " and (lower(secUser.firstname) like '%$value%' or lower(secUser.lastname) like '%" + value + "%' or lower(secUser.email) like '%" + value + "%') ";
         }
         if (onlineUserSearch.isPresent()) {
-            List<Long> onlineUsers = getAllOnlineUserIds(project);
-            if (onlineUsers.isEmpty()) {
-                return Page.empty();
-            }
-            where += " and secUser.id in (" + onlineUsers.stream().map(String::valueOf).collect(Collectors.joining(",")) + ") ";
+            where += " and secUser.id in :online_users ";
         }
 
 
@@ -559,7 +607,7 @@ public class SecUserService extends ModelService {
         } else {
             sortColumn = "secUser." + sortColumn;
         }
-        order = " order by " + sortColumn + " " + sortDirection;
+        order = " order by " + sortColumn + " " + sortDir;
 
         String request = select + from + where + groupBy + having + order;
 
@@ -572,6 +620,13 @@ public class SecUserService extends ModelService {
 
 
         Query query = getEntityManager().createQuery(request, Object[].class);
+        if (onlineUserSearch.isPresent()) { // Check if onlineUserSearch was present
+            List<Long> onlineUsers = getAllOnlineUserIds(project);
+            if (onlineUsers.isEmpty()) {
+                return Page.empty();
+            }
+            query.setParameter("online_users", onlineUsers); 
+        }
 
         if (max>0) {
             query.setMaxResults(max.intValue());
