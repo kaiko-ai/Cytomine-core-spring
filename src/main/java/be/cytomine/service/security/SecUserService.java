@@ -345,12 +345,21 @@ public class SecUserService extends ModelService {
 
         // Just quick fix to avoid injections
         Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("username", "firstname", "lastname", "email", "id", "role", "fullName"));
-        if (sortColumn == null || !allowedSortColumns.contains(sortColumn)) {
-            sortColumn = "username";
+        String validatedSortColumn = null; 
+        if (allowedSortColumns.contains(sortColumn)) {
+            for(String c: allowedSortColumns){
+                if(c.equals(sortColumn)){
+                    validatedSortColumn = c;
+                    break;                    
+                }
+            }
+        }
+        else {
+            validatedSortColumn = "username";
         }
         String sortDir = sortDirection.toLowerCase().equals("desc") ? " DESC " : " ASC ";
 
-        if (sortColumn.equals("role") && !userSearchExtension.isWithRoles()) {
+        if (validatedSortColumn.equals("role") && !userSearchExtension.isWithRoles()) {
             throw new WrongArgumentException("Cannot sort on user role without argument withRoles");
         }
 
@@ -383,12 +392,12 @@ public class SecUserService extends ModelService {
             groupBy = "GROUP BY u.id ";
         }
 
-        if (sortColumn.equals("role")) {
+        if (validatedSortColumn.equals("role")) {
             sort = "ORDER BY role " + sortDir + ", u.id ASC ";
-        } else if (sortColumn.equals("fullName")) {
+        } else if (validatedSortColumn.equals("fullName")) {
             sort = "ORDER BY u.firstname " + sortDir + ", u.id ";
-        } else if (!sortColumn.equals("id")) { //avoid random sort when multiple values of the
-            sort = "ORDER BY u." + sortColumn + " " + sortDir + ", u.id ";
+        } else if (!validatedSortColumn.equals("id")) { //avoid random sort when multiple values of the
+            sort = "ORDER BY u." + validatedSortColumn + " " + sortDir + ", u.id ";
         } else sort = "ORDER BY u.id " + sortDir + " ";
 
         String request = select + from + where + search + groupBy + sort;
@@ -564,6 +573,20 @@ public class SecUserService extends ModelService {
         Optional<SearchParameterEntry> multiSearch = searchParameters.stream().filter(x -> x.getProperty().equals("fullName")).findFirst();
         Optional<SearchParameterEntry> projectRoleSearch = searchParameters.stream().filter(x -> x.getProperty().equals("projectRole")).findFirst();
 
+        // Just quick fix to avoid injections
+        Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("username", "firstname", "lastname", "email", "id", "role", "projectRole", "fullName"));
+        String validatedSortColumn = null; 
+        if (allowedSortColumns.contains(sortColumn)) {
+            for(String c: allowedSortColumns){
+                if(c.equals(sortColumn)){
+                    validatedSortColumn = c;
+                    break;                    
+                }
+            }
+        }
+        else {
+            validatedSortColumn = "username";
+        }
         String select = "select distinct secUser ";
         String from = "from ProjectRepresentativeUser r right outer join r.user secUser ON (r.project.id = " + project.getId() + "), " +
                 "AclObjectIdentity as aclObjectId, AclEntry as aclEntry, AclSid as aclSid ";
@@ -576,10 +599,13 @@ public class SecUserService extends ModelService {
         String order = "";
         String having = "";
         String sortDir = sortDirection.toLowerCase().equals("desc") ? " DESC " : " ASC ";
+        Map<String, Object> mapParams = new HashMap<>();
 
         if (multiSearch.isPresent()) {
             String value = ((String) multiSearch.get().getValue()).toLowerCase();
-            where += " and (lower(secUser.firstname) like '%$value%' or lower(secUser.lastname) like '%" + value + "%' or lower(secUser.email) like '%" + value + "%') ";
+            where += " and (lower(secUser.firstname) like '%$value%' or lower(secUser.lastname) like :name or lower(secUser.email) like :name) ";
+            value = "%"+value+"%";
+            mapParams.put("name", value);
         }
         if (onlineUserSearch.isPresent()) {
             where += " and secUser.id in :online_users ";
@@ -590,7 +616,7 @@ public class SecUserService extends ModelService {
             List<String> roles = (projectRoleSearch.get().getValue() instanceof String) ? List.of((String) projectRoleSearch.get().getValue()) : (List<String>) projectRoleSearch.get().getValue();
             having += " HAVING MAX(CASE WHEN r.id IS NOT NULL THEN 'representative' " +
                     "WHEN aclEntry.mask = 16 THEN 'manager' " +
-                    "ELSE 'contributor' END) IN (" + roles.stream().map(x -> "'" + x + "'").collect(Collectors.joining(",")) + ")";
+                    "ELSE 'contributor' END) IN (:roles) ";
         }
 
         //works because 'contributor' < 'manager' < 'representative'
@@ -600,14 +626,14 @@ public class SecUserService extends ModelService {
                 " END) as role ";
         groupBy = "GROUP BY secUser.id ";
 
-        if (sortColumn.equals("projectRole")) {
-            sortColumn = "role";
-        } else if (sortColumn.equals("fullName")) {
-            sortColumn = "secUser.firstname";
+        if (validatedSortColumn.equals("projectRole")) {
+            validatedSortColumn = "role";
+        } else if (validatedSortColumn.equals("fullName")) {
+            validatedSortColumn = "secUser.firstname";
         } else {
-            sortColumn = "secUser." + sortColumn;
+            validatedSortColumn = "secUser." + validatedSortColumn;
         }
-        order = " order by " + sortColumn + " " + sortDir;
+        order = " order by " + validatedSortColumn + " " + sortDir;
 
         String request = select + from + where + groupBy + having + order;
 
@@ -620,6 +646,13 @@ public class SecUserService extends ModelService {
 
 
         Query query = getEntityManager().createQuery(request, Object[].class);
+        if (projectRoleSearch.isPresent()) {
+            List<String> roles = (projectRoleSearch.get().getValue() instanceof String) ? List.of((String) projectRoleSearch.get().getValue()) : (List<String>) projectRoleSearch.get().getValue();
+            query.setParameter("roles", roles);
+        }
+        for (Map.Entry<String, Object> entry : mapParams.entrySet()) {
+            query.setParameter(entry.getKey(), entry.getValue());
+        }
         if (onlineUserSearch.isPresent()) { // Check if onlineUserSearch was present
             List<Long> onlineUsers = getAllOnlineUserIds(project);
             if (onlineUsers.isEmpty()) {

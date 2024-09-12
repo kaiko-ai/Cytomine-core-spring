@@ -278,31 +278,41 @@ public class ImageInstanceService extends ModelService {
         String imageInstanceAlias = "ui";
         String abstractImageAlias = "ai";
 
-
-        if (sortColumn==null) {
-            sortColumn = "created";
+        // Just quick fix to avoid injections
+        Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("id", "created", "updated", "instanceFilename", "numberOfAnnotations", "numberOfJobAnnotations", "numberOfReviewedAnnotations", "name", "blindedName","countImageJobAnnotations","countImageReviewedAnnotations","countImageAnnotations"));
+        String validatedSortColumn = null; 
+        if (allowedSortColumns.contains(sortColumn)) {
+            for(String c: allowedSortColumns){
+                if(c.equals(sortColumn)){
+                    validatedSortColumn = c;
+                    break;                    
+                }
+            }
+        }
+        else {
+            validatedSortColumn = "created";
         }
         if (sortDirection==null) {
             sortDirection = "asc";
         }
 
         // TODO: move this in controller
-        if (sortColumn.equals("numberOfAnnotations")) {
-            sortColumn = "countImageAnnotations";
+        if (validatedSortColumn.equals("numberOfAnnotations")) {
+            validatedSortColumn = "countImageAnnotations";
         }
-        if (sortColumn.equals("numberOfJobAnnotations")) {
-            sortColumn = "countImageJobAnnotations";
+        if (validatedSortColumn.equals("numberOfJobAnnotations")) {
+            validatedSortColumn = "countImageJobAnnotations";
         }
-        if (sortColumn.equals("numberOfReviewedAnnotations")) {
-            sortColumn = "countImageReviewedAnnotations";
+        if (validatedSortColumn.equals("numberOfReviewedAnnotations")) {
+            validatedSortColumn = "countImageReviewedAnnotations";
         }
-        if (sortColumn.equals("name")) {
-            sortColumn = "instanceFilename";
+        if (validatedSortColumn.equals("name")) {
+            validatedSortColumn = "instanceFilename";
         }
 
-        String sortedProperty = ReflectionUtils.findField(ImageInstance.class, sortColumn)!=null ? imageInstanceAlias + "." + sortColumn : null;
-        if (sortedProperty==null) sortedProperty = ReflectionUtils.findField(AbstractImage.class, sortColumn)!=null ? abstractImageAlias + "." + sortColumn : null;
-        if (sortedProperty==null) throw new CytomineMethodNotYetImplementedException("ImageInstance list sorted by " + sortColumn + " is not implemented");
+        String sortedProperty = ReflectionUtils.findField(ImageInstance.class, validatedSortColumn)!=null ? imageInstanceAlias + "." + validatedSortColumn : null;
+        if (sortedProperty==null) sortedProperty = ReflectionUtils.findField(AbstractImage.class, validatedSortColumn)!=null ? abstractImageAlias + "." + validatedSortColumn : null;
+        if (sortedProperty==null) throw new CytomineMethodNotYetImplementedException("ImageInstance list sorted by " + validatedSortColumn + " is not implemented");
         sortedProperty = SQLSearchParameter.fieldNameToSQL(sortedProperty);
 
         List<SearchParameterEntry> validatedSearchParameters = getDomainAssociatedSearchParameters(searchParameters, false);
@@ -452,8 +462,19 @@ public class ImageInstanceService extends ModelService {
         String abstractImageAlias = "ai";
         String mimeAlias = "mime";
 
-        if (sortColumn==null) {
-            sortColumn = "created";
+        // Just quick fix to avoid injections
+        Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("id", "created", "updated", "instanceFilename", "numberOfAnnotations", "numberOfJobAnnotations", "numberOfReviewedAnnotations", "name", "blindedName","countImageJobAnnotations","countImageReviewedAnnotations","countImageAnnotations"));
+        String validatedSortColumn = null; 
+        if (allowedSortColumns.contains(sortColumn)) {
+            for(String c: allowedSortColumns){
+                if(c.equals(sortColumn)){
+                    validatedSortColumn = c;
+                    break;                    
+                }
+            }
+        }
+        else {
+            validatedSortColumn = "created";
         }
         if (sortDirection==null) {
             sortDirection = "asc";
@@ -470,14 +491,14 @@ public class ImageInstanceService extends ModelService {
         }
 
 
-        String sortedProperty = ReflectionUtils.findField(ImageInstance.class, sortColumn)!=null ? imageInstanceAlias + "." + sortColumn : null;
-        if(sortColumn.equals("blindedName")) {
-            sortColumn = "id";
+        String sortedProperty = ReflectionUtils.findField(ImageInstance.class, validatedSortColumn)!=null ? imageInstanceAlias + "." + validatedSortColumn : null;
+        if(validatedSortColumn.equals("blindedName")) {
+            validatedSortColumn = "id";
         }
 
-        if (sortedProperty==null) sortedProperty = ReflectionUtils.findField(AbstractImage.class, sortColumn)!=null ? abstractImageAlias + "." + sortColumn : null;
-        if(sortedProperty==null) sortedProperty = ReflectionUtils.findField(UploadedFile.class, sortColumn)!=null ? mimeAlias + "." + sortColumn : null;
-        if (sortedProperty==null) throw new CytomineMethodNotYetImplementedException("ImageInstance list sorted by " + sortColumn + " is not implemented");
+        if (sortedProperty==null) sortedProperty = ReflectionUtils.findField(AbstractImage.class, validatedSortColumn)!=null ? abstractImageAlias + "." + validatedSortColumn : null;
+        if(sortedProperty==null) sortedProperty = ReflectionUtils.findField(UploadedFile.class, validatedSortColumn)!=null ? mimeAlias + "." + validatedSortColumn : null;
+        if (sortedProperty==null) throw new CytomineMethodNotYetImplementedException("ImageInstance list sorted by " + validatedSortColumn + " is not implemented");
         sortedProperty = SQLSearchParameter.fieldNameToSQL(sortedProperty);
 
         List<SearchParameterEntry> validatedSearchParameters = getDomainAssociatedSearchParameters(searchParameters, project.getBlindMode());

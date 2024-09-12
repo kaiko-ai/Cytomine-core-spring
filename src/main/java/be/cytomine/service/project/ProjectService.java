@@ -330,9 +330,17 @@ public class ProjectService extends ModelService {
 
         // Just quick fix to avoid injections
         Set<String> allowedSortColumns = new HashSet<>(Arrays.asList("id", "name", "created", "updated", "ontology_name", "currentUserRole", "membersCount", "lastActivity", "numberOfImages", "numberOfAnnotations", "numberOfJobAnnotations", "numberOfReviewedAnnotations"));
-
-        if (!allowedSortColumns.contains(sortColumn)) {
-            sortColumn = "created";
+        String validatedSortColumn = null; 
+        if (allowedSortColumns.contains(sortColumn)) {
+            for(String c: allowedSortColumns){
+                if(c.equals(sortColumn)){
+                    validatedSortColumn = c;
+                    break;                    
+                }
+            }
+        }
+        else {
+            validatedSortColumn = "created";
         }
 
         if (!members.isBlank() && !projectSearchExtension.isWithMembersCount()) {
@@ -424,20 +432,20 @@ public class ProjectService extends ModelService {
         }
 
 
-        switch(sortColumn) {
+        switch(validatedSortColumn) {
             case "currentUserRole" :
                 if(projectSearchExtension.isWithCurrentUserRoles()) {
-                    sortColumn="is_representative "+((sortDirection.equals("desc")) ? " DESC " : " ASC ")+", is_admin";
+                    validatedSortColumn="is_representative "+((sortDirection.equals("desc")) ? " DESC " : " ASC ")+", is_admin";
                 }
                 break;
             case "membersCount" :
                 if(projectSearchExtension.isWithMembersCount()) {
-                    sortColumn="members.member_count";
+                    validatedSortColumn="members.member_count";
                 }
                 break;
             case "lastActivity" :
                 if(projectSearchExtension.isWithLastActivity()) {
-                    sortColumn="activities.max_date";
+                    validatedSortColumn="activities.max_date";
                 }
                 break;
             case "name":
@@ -447,12 +455,12 @@ public class ProjectService extends ModelService {
             case "numberOfReviewedAnnotations":
                 String regex = "([a-z])([A-Z]+)";
                 String replacement = "$1_$2";
-                sortColumn ="p."+sortColumn.replaceAll("numberOf", "count").replaceAll(regex, replacement).toLowerCase();
+                validatedSortColumn ="p."+validatedSortColumn.replaceAll("numberOf", "count").replaceAll(regex, replacement).toLowerCase();
                 break;
         }
         // ... (query building logic)
 
-        sort = " ORDER BY " + sortColumn;
+        sort = " ORDER BY " + validatedSortColumn;
 
         
         sort += (sortDirection.equals("desc")) ? " DESC " : " ASC ";
