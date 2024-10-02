@@ -28,6 +28,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+
 import java.util.*;
 
 @Entity
@@ -48,7 +50,7 @@ public class SecUser extends CytomineDomain {
     @NotNull
     @NotBlank
     @Column(nullable = false)
-//    @Pattern(regexp = "^[^\\ ].*[^\\ ]\\$") TODO
+    @Pattern(regexp = "^[a-zA-Z0-9\\s]+$")
     protected String username;
 
     @NotNull

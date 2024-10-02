@@ -24,6 +24,8 @@ import lombok.Setter;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +41,7 @@ public class Term extends CytomineDomain {
 
     @NotNull
     @NotBlank
+    @Pattern(regexp = "^[\\p{L}0-9]+([\\s-][\\p{L}0-9]+)*$")
     @Column(nullable = false)
     private String name;
 

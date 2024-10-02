@@ -115,7 +115,7 @@ public class ReviewedAnnotationListing extends AnnotationListing {
      * Generate SQL string for FROM
      * FROM depends on data to print (if image name is aksed, need to join with imageinstance+abstractimage,...)
      */
-    String getFrom() {
+    String getFrom(Map<String, Object> parameters) {
         String from = "FROM reviewed_annotation a ";
         String where = "WHERE true\n";
 
@@ -155,11 +155,12 @@ public class ReviewedAnnotationListing extends AnnotationListing {
     }
 
     @Override
-    String getUsersForTermConst() {
+    String getUsersForTermConst(Map<String, Object> parameters) {
         return "";
     }
 
-    String buildExtraRequest() {
+    String buildExtraRequest(Map<String, Object> parameters) {
+        // TODO: Protect query
 
         if (kmeansValue == 3 && image != null && bbox != null) {
             /**

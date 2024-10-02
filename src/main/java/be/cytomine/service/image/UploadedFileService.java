@@ -38,6 +38,7 @@ import be.cytomine.utils.filters.SQLSearchParameter;
 import be.cytomine.utils.filters.SearchOperation;
 import be.cytomine.utils.filters.SearchParameterEntry;
 import be.cytomine.utils.filters.SearchParameterProcessed;
+import liquibase.pro.packaged.q;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -437,15 +438,19 @@ public class UploadedFileService extends ModelService {
         }
 
         String currentTree = uploadedFile.getLTree()!=null ?  uploadedFile.getLTree() : "";
-        String request = "UPDATE uploaded_file SET l_tree = '' WHERE id= "+uploadedFile.getId()+";\n";
+        String request = "UPDATE uploaded_file SET l_tree = '' WHERE id= :id;\n";
         String parentTree = (uploadedFile.getParent()!=null && uploadedFile.getParent().getLTree()!=null)? uploadedFile.getParent().getLTree() : "";
         if (!parentTree.isEmpty()) {
             request += "UPDATE uploaded_file " +
-                    "SET l_tree = '" +parentTree +"' || subpath(l_tree, nlevel('" +currentTree +"')) " +
-                    "WHERE l_tree <@ '" +currentTree +"';";
+                    "SET l_tree = :parentTree || subpath(l_tree, nlevel(:currentTree)) " +
+                    "WHERE l_tree <@ :currentTree;";
         }
-        getEntityManager().createNativeQuery(request);
-
+        Query query = getEntityManager().createNativeQuery(request);
+        query.setParameter("id", uploadedFile.getId());
+        if (!parentTree.isEmpty()) {
+            query.setParameter("parentTree", parentTree);
+            query.setParameter("currentTree", currentTree);
+        }
     }
 
 

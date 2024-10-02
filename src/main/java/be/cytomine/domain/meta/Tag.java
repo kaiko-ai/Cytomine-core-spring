@@ -27,6 +27,7 @@ import lombok.Setter;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 
 @Entity
 @Getter
@@ -35,6 +36,7 @@ public class Tag extends CytomineDomain {
 
     @NotNull
     @NotBlank
+    @Pattern(regexp = "^[\\p{L}0-9]+([\\s-][\\p{L}0-9]+)*$")
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)

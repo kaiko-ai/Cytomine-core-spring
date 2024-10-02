@@ -111,11 +111,11 @@ public abstract class AnnotationListing {
     Boolean kmeans = false;
     Integer kmeansValue = 3;
 
-    abstract String getFrom();
+    abstract String getFrom(Map<String, Object> parameters);
 
     public abstract String getDomainClass();
 
-    abstract String buildExtraRequest();
+    abstract String buildExtraRequest(Map<String, Object> parameters);
 
     LinkedHashMap<String,String> extraColmun = new LinkedHashMap<>();
 
@@ -205,9 +205,9 @@ public abstract class AnnotationListing {
     /**
      * Generate SQL request string
      */
-    public String getAnnotationsRequest() {
+    public String getAnnotationsRequest(Map<String, Object> parameters) {
 
-        buildExtraRequest();
+        buildExtraRequest(parameters);
 
         Map<String, String> columns = buildColumnToPrint();
         Map<String, String> sqlColumns = new LinkedHashMap<>();
@@ -221,46 +221,46 @@ public abstract class AnnotationListing {
             }
         }
         String whereRequest =
-                getProjectConst() +
-                        getUserConst() +
-                        getUsersConst() +
+                getProjectConst(parameters) +
+                        getUserConst(parameters) +
+                        getUsersConst(parameters) +
 
-                        getImageConst() +
-                        getImagesConst() +
+                        getImageConst(parameters) +
+                        getImagesConst(parameters) +
 
-                        getSliceConst() +
-                        getSlicesConst() +
+                        getSliceConst(parameters) +
+                        getSlicesConst(parameters) +
 
-                        getTagConst() +
-                        getTagsConst() +
+                        getTagConst(parameters) +
+                        getTagsConst(parameters) +
 
-                        getTermConst() +
-                        getTermsConst() +
+                        getTermConst(parameters) +
+                        getTermsConst(parameters) +
 
-                        getTrackConst() +
-                        getTracksConst() +
-                        getBeforeOrAfterSliceConst() +
+                        getTrackConst(parameters) +
+                        getTracksConst(parameters) +
+                        getBeforeOrAfterSliceConst(parameters) +
 
-                        getUsersForTermConst() +
+                        getUsersForTermConst(parameters) +
 
-                        getUserForTermAlgoConst() +
-                        getUsersForTermAlgoConst() +
+                        getUserForTermAlgoConst(parameters) +
+                        getUsersForTermAlgoConst(parameters) +
 
-                        getSuggestedTermConst() +
-                        getSuggestedTermsConst() +
+                        getSuggestedTermConst(parameters) +
+                        getSuggestedTermsConst(parameters) +
 
                         getNotReviewedOnlyConst() +
-                        getParentsConst() +
+                        getParentsConst(parameters) +
                         getAvoidEmptyCentroidConst() +
-                        getReviewUsersConst() +
+                        getReviewUsersConst(parameters) +
 
-                        getIntersectConst() +
-                        getIntersectAnnotationConst() +
-                        getMaxDistanceAnnotationConst() +
-                        getExcludedAnnotationConst() +
+                        getIntersectConst(parameters) +
+                        getIntersectAnnotationConst(parameters) +
+                        getMaxDistanceAnnotationConst(parameters) +
+                        getExcludedAnnotationConst(parameters) +
 
-                        getBeforeThan() +
-                        getAfterThan() +
+                        getBeforeThan(parameters) +
+                        getAfterThan(parameters) +
                         createOrderBy();
 
         if (term!=null || terms!=null || track!=null || tracks!=null) {
@@ -293,7 +293,7 @@ public abstract class AnnotationListing {
                 request += "atr.track_id as track, atr.id as annotationTracks ";
             }
 
-            request += "FROM (" + getSelect(sqlColumns) + getFrom() + whereRequest + ") a \n";
+            request += "FROM (" + getSelect(sqlColumns) + getFrom(parameters) + whereRequest + ") a \n";
 
             if (term!=null || terms!=null) {
                 if (this instanceof AlgoAnnotationListing) {
@@ -335,7 +335,7 @@ public abstract class AnnotationListing {
             return request;
         }
 
-        return getSelect(sqlColumns) + getFrom() + whereRequest;
+        return getSelect(sqlColumns) + getFrom(parameters) + whereRequest;
 
     }
 
@@ -382,77 +382,101 @@ public abstract class AnnotationListing {
         return (String)list.stream().map(x -> String.valueOf(x)).collect(Collectors.joining(", "));
     }
 
-    String getProjectConst() {
-        return (project!=null ? "AND a.project_id = " + project + "\n" : "");
+    String getProjectConst(Map<String, Object> parameters) {
+        if(project!=null) {
+            parameters.put("project_id", project);
+            return "AND a.project_id = :project_id\n";
+        }
+        return "";
     }
 
-    String getUsersConst() {
-        return (users!=null ? "AND a.user_id IN ("+joinValues(users)+")\n" : "");
+    String getUsersConst(Map<String, Object> parameters) {
+        if(users!=null) {
+            parameters.put("users", users);
+            return "AND a.user_id IN :users\n";
+        }
+        return "";
     }
 
-    String getReviewUsersConst() {
-        return (reviewUsers!=null ? "AND a.review_user_id IN ("+joinValues(reviewUsers)+")\n" : "");
+    String getReviewUsersConst(Map<String, Object> parameters) {
+        if(reviewUsers!=null) {
+            parameters.put("reviewUsers", reviewUsers);
+            return "AND a.review_user_id IN :reviewUsers\n";
+        }
+        return "";
     }
 
 
-    String getUsersForTermConst() {
+    String getUsersForTermConst(Map<String, Object> parameters) {
         if (usersForTerm!=null) {
             addIfMissingColumn("term");
-            return "AND at.user_id IN ("+joinValues(usersForTerm)+")\n";
+            parameters.put("usersForTerm", usersForTerm);
+            return "AND at.user_id IN :usersForTerm\n";
         } else {
             return "";
         }
     }
 
-    String getImagesConst() {
+    String getImagesConst(Map<String, Object> parameters) {
         if (images!=null && project!=null && images.size() == entityManager.find(Project.class, project).getCountImages()) {
             return ""; //images number equals to project image number, no const needed
         } else if (images!=null && images.isEmpty()) {
             throw new ObjectNotFoundException("The image has been deleted!");
         } else {
-            return (images!=null ? "AND a.image_id IN ("+joinValues(images)+")\n" : "");
+            if(images!=null) {
+                parameters.put("images", images);
+                return "AND a.image_id IN :images\n";
+            }
+            return "";
         }
 
     }
 
-    String getImageConst() {
+    String getImageConst(Map<String, Object> parameters) {
         if (image!=null) {
             ImageInstance imageInstance = entityManager.find(ImageInstance.class, image);
             if (imageInstance==null) {
                 throw new ObjectNotFoundException("Image " + image + " not exist!");
             }
-            return "AND a.image_id = " + imageInstance.getId() + "\n";
+            parameters.put("image_id", imageInstance.getId());
+            return "AND a.image_id = :image_id \n";
         } else {
             return "";
         }
     }
 
-    String getSlicesConst() {
+    String getSlicesConst(Map<String, Object> parameters) {
         if (slices!=null && slices.isEmpty()) {
             throw new ObjectNotFoundException("The slice has been deleted!");
         } else {
-            return (slices!=null ? "AND a.slice_id IN ("+joinValues(slices)+")\n" : "");
+            if(slices!=null) {
+                parameters.put("slices", slices);
+                return "AND a.slice_id IN :slices\n";
+            }
+            return "";
         }
 
     }
 
-    String getSliceConst() {
+    String getSliceConst(Map<String, Object> parameters) {
         if (slice!=null) {
             if (entityManager.find(SliceInstance.class, slice)==null) {
                 throw new ObjectNotFoundException("Slice "+slice+" not exist!");
             }
-            return "AND a.slice_id = " + slice + "\n";
+            parameters.put("slice_id", slice);
+            return "AND a.slice_id = :slice_id\n";
         } else {
             return "";
         }
     }
 
-    String getUserConst() {
+    String getUserConst(Map<String, Object> parameters) {
         if (user!=null) {
             if (entityManager.find(SecUser.class, user)==null) {
                 throw new ObjectNotFoundException("User "+user+" not exist!");
             }
-            return "AND a.user_id = "+user+"\n";
+            parameters.put("user_id", user);
+            return "AND a.user_id = :user_id \n";
         } else {
             return "";
         }
@@ -460,25 +484,38 @@ public abstract class AnnotationListing {
 
     abstract String getNotReviewedOnlyConst();
 
-    String getIntersectConst() {
-        return (bbox!=null ? "AND ST_Intersects(a.location,ST_GeometryFromText('"+bbox.toString()+"',0))\n" : "");
+    String getIntersectConst(Map<String, Object> parameters) {
+        if (bbox!=null) {
+            parameters.put("bbox", bbox.toString());
+            return "AND ST_Intersects(a.location,ST_GeometryFromText(:bbox,0))\n";
+        } else {
+            return "";
+        }
     }
 
-    String getIntersectAnnotationConst() {
-        return (bboxAnnotation!=null ? "AND ST_Intersects(a.location,ST_GeometryFromText('" + bboxAnnotation.toString() + "',0))\n" : "");
+    String getIntersectAnnotationConst(Map<String, Object> parameters) {
+        if (bboxAnnotation!=null) {
+            parameters.put("bboxAnnotation", bboxAnnotation.toString());
+            return "AND ST_Intersects(a.location,ST_GeometryFromText(:bboxAnnotation,0))\n";
+        } else {
+            return "";
+        }
     }
 
-    String getMaxDistanceAnnotationConst() {
+    String getMaxDistanceAnnotationConst(Map<String, Object> parameters) {
         if(maxDistanceBaseAnnotation!=null) {
             if(baseAnnotation==null) {
                 throw new ObjectNotFoundException("You need to provide a 'baseAnnotation' parameter (annotation id/location = "+baseAnnotation+")!");
             } else {
+                parameters.put("maxDistanceBaseAnnotation", maxDistanceBaseAnnotation);
                 try {
                     AnnotationDomain base = AnnotationDomain.getAnnotationDomain(entityManager, ((Long)baseAnnotation), null);
                     //ST_distance(a.location,ST_GeometryFromText('POINT (0 0)'))
-                    return "AND ST_distance(a.location,ST_GeometryFromText('"+base.getWktLocation() + "')) <= "+maxDistanceBaseAnnotation+"\n";
+                    parameters.put("getWktLocation", base.getWktLocation());
+                    return "AND ST_distance(a.location,ST_GeometryFromText(:getWktLocation)) <= :maxDistanceBaseAnnotation\n";
                 } catch (Exception e) {
-                    return "AND ST_distance(a.location,ST_GeometryFromText('"+baseAnnotation+ "')) <= " + maxDistanceBaseAnnotation + "\n";
+                    parameters.put("baseAnnotation", baseAnnotation);
+                    return "AND ST_distance(a.location,ST_GeometryFromText(:baseAnnotation)) <= :maxDistanceBaseAnnotation\n";
                 }
             }
         } else {
@@ -490,85 +527,95 @@ public abstract class AnnotationListing {
         return (avoidEmptyCentroid ? "AND ST_IsEmpty(st_centroid(a.location))=false\n" : "");
     }
 
-    String getTermConst() {
+    String getTermConst(Map<String, Object> parameters) {
         if (term!=null) {
             if (entityManager.find(Term.class, term)==null) {
                 throw new ObjectNotFoundException("Term " + term + "not exist!");
             }
             addIfMissingColumn("term");
+            parameters.put("term_id", term);
 
             if (this instanceof ReviewedAnnotationListing)
-                return " AND (at.term_id = "+term + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
+                return " AND (at.term_id = :term_id" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
             else
-                return " AND ((at.term_id = "+term+ ")" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
+                return " AND ((at.term_id = :term_id)" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
         } else {
             return "";
         }
     }
-    String getParentsConst() {
+    String getParentsConst(Map<String, Object> parameters) {
         if (parents!=null) {
-            return " AND a.parent_ident IN ("+joinValues(parents)+")\n";
+            parameters.put("parents", parents);
+            return " AND a.parent_ident IN parents\n";
         } else {
             return "";
         }
     }
 
 
-    String getTermsConst() {
+    String getTermsConst(Map<String, Object> parameters) {
         if (terms!=null) {
             addIfMissingColumn("term");
-            if (this instanceof ReviewedAnnotationListing)
-                return " AND (at.term_id IN ("+joinValues(terms) + ")" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
-            else
-                return " AND ((at.term_id IN ("+joinValues(terms) + "))" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
+            parameters.put("terms", terms);
+            if (this instanceof ReviewedAnnotationListing) {
+                return " AND (at.term_id IN (:terms)" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
+            } else {
+                return " AND ((at.term_id IN (:terms))" + ((noTerm) ? " OR at.term_id IS NULL" : "") + ")\n";
+            }
         } else {
             return "";
         }
     }
 
-    String getTrackConst() {
+    String getTrackConst(Map<String, Object> parameters) {
         if (track!=null) {
             if (entityManager.find(Track.class, track)!=null) {
                 throw new ObjectNotFoundException("Track " + track + " not exists !");
             }
             addIfMissingColumn("track");
-            return " AND (atr.track_id = "+track + ((noTrack) ? " OR atr.track_id IS NULL" : "") + ")\n";
+            parameters.put("track_id", track);
+            return " AND (atr.track_id = :track_id" + ((noTrack) ? " OR atr.track_id IS NULL" : "") + ")\n";
         } else {
             return "";
         }
     }
 
-    String getTracksConst() {
+    String getTracksConst(Map<String, Object> parameters) {
         if (tracks!=null) {
             addIfMissingColumn("track");
-            return "AND (atr.track_id IN ("+joinValues(tracks) +") " + ((noTrack) ? " OR atr.track_id IS NULL" : "") + ")\n";
+            parameters.put("tracks", tracks);
+            return "AND (atr.track_id IN :tracks " + ((noTrack) ? " OR atr.track_id IS NULL" : "") + ")\n";
         } else {
             return "";
         }
     }
 
-    String getTagConst() {
+    String getTagConst(Map<String, Object> parameters) {
         if (tag!=null && noTag) {
-            return "AND (tda.tag_id = "+tag + " OR tda.tag_id IS NULL)\n";
+            parameters.put("tag_id", tag);
+            return "AND (tda.tag_id = :tag_id OR tda.tag_id IS NULL)\n";
         } else if (tag!=null) {
-            return "AND tda.tag_id = "+tag +"\n";
+            parameters.put("tag_id", tag);
+            return "AND tda.tag_id = :tag_id\n";
         } else {
             return "";
         }
     }
 
-    String getTagsConst() {
+    String getTagsConst(Map<String, Object> parameters) {
         if (tags!=null  && noTag) {
-            return "AND (tda.tag_id IN ("+joinValues(tags) + ") OR tda.tag_id IS NULL)\n";
+            parameters.put("tags", tags);
+            return "AND (tda.tag_id IN :tags OR tda.tag_id IS NULL)\n";
         } else if (tags!=null ) {
-            return "AND tda.tag_id IN (" + joinValues(tags) + ")\n";
+            parameters.put("tags", tags);
+            return "AND tda.tag_id IN :tags)\n";
         } else {
             return "";
         }
     }
 
 
-        String getBeforeOrAfterSliceConst() {
+    String getBeforeOrAfterSliceConst(Map<String, Object> parameters) {
         if ((track!=null || tracks!=null) && (beforeSlice!=null || afterSlice!=null)) {
             addIfMissingColumn("slice");
             Long sliceId = (beforeSlice!=null) ? beforeSlice : afterSlice;
@@ -577,52 +624,62 @@ public abstract class AnnotationListing {
                 throw new ObjectNotFoundException("Slice "+ sliceId +" not exists !");
             }
             String sign = (beforeSlice!=null) ? "<" : ">";
-            return "AND (asl.channel + ai.channels * (asl.z_stack + ai.depth * asl.time)) "+sign+" " + sliceInstance.getBaseSlice().getRank() +"\n";
+            parameters.put("slideInstanceRank", sliceInstance.getBaseSlice().getRank());
+            return "AND (asl.channel + ai.channels * (asl.z_stack + ai.depth * asl.time)) "+sign+" :slideInstanceRank\n";
         } else {
             return "";
         }
     }
 
-    String getExcludedAnnotationConst() {
-        return (excludedAnnotation!=null ? "AND a.id <> " + excludedAnnotation + "\n" : "");
+    String getExcludedAnnotationConst(Map<String, Object> parameters) {
+        if(excludedAnnotation!=null) {
+            parameters.put("excludedAnnotation", excludedAnnotation);
+            return "AND a.id <> :excludedAnnotation\n";
+        } else {
+            return "";
+        }
     }
 
-    String getSuggestedTermConst() {
+    String getSuggestedTermConst(Map<String, Object> parameters) {
         if (suggestedTerm!=null) {
             if (entityManager.find(Term.class, suggestedTerm)!=null) {
                 throw new ObjectNotFoundException("Term "+suggestedTerm+" not exist!");
             }
             addIfMissingColumn("algo");
-            return "AND aat.term_id = "+suggestedTerm+"  AND aat.deleted IS NULL \n";
+            parameters.put("suggestedTerm", suggestedTerm);
+            return "AND aat.term_id = :suggestedTerm AND aat.deleted IS NULL \n";
         } else {
             return "";
         }
     }
 
-    String getSuggestedTermsConst() {
+    String getSuggestedTermsConst(Map<String, Object> parameters) {
         if (suggestedTerms!=null) {
             addIfMissingColumn("algo");
-            return "AND aat.term_id IN ("+joinValues(suggestedTerms)+")\n";
+            parameters.put("suggestedTerms", suggestedTerms);
+            return "AND aat.term_id IN :suggestedTerms\n";
         } else {
             return "";
         }
     }
 
-    String getUserForTermAlgoConst() {
+    String getUserForTermAlgoConst(Map<String, Object> parameters) {
         if (userForTermAlgo!=null) {
             addIfMissingColumn("term");
             addIfMissingColumn("algo");
-            return "AND aat.user_job_id = " + userForTermAlgo + "\n";
+            parameters.put("userForTermAlgo", userForTermAlgo);
+            return "AND aat.user_job_id = :userForTermAlgo\n";
         } else {
             return "";
         }
     }
 
-    String getUsersForTermAlgoConst() {
+    String getUsersForTermAlgoConst(Map<String, Object> parameters) {
         if (usersForTermAlgo!=null) {
             addIfMissingColumn("algo");
             addIfMissingColumn("term");
-            return "AND aat.user_job_id IN ("+joinValues(usersForTermAlgo)+")\n";
+            parameters.put("usersForTermAlgo", usersForTermAlgo);
+            return "AND aat.user_job_id IN :usersForTermAlgo\n";
         } else {
             return "";
         }
@@ -630,16 +687,18 @@ public abstract class AnnotationListing {
 
     abstract String createOrderBy();
 
-    String getBeforeThan() {
+    String getBeforeThan(Map<String, Object> parameters) {
         if (beforeThan!=null) {
-            return "AND a.created < '"+beforeThan+"'\n";
+            parameters.put("beforeThan", beforeThan);
+            return "AND a.created < :beforeThan\n";
         } else {
             return "";
         }
     }
-    String getAfterThan() {
+    String getAfterThan(Map<String, Object> parameters) {
         if (afterThan!=null) {
-            return "AND a.created > '"+afterThan+"'\n";
+            parameters.put("afterThan", afterThan);
+            return "AND a.created > :afterThan\n";
         } else {
             return "";
         }

@@ -26,6 +26,8 @@ import lombok.Setter;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,7 @@ public class Ontology extends CytomineDomain {
 
     @NotNull
     @NotBlank
+    @Pattern(regexp = "^[\\p{L}0-9]+([\\s-][\\p{L}0-9]+)*$")
     @Column(nullable = false, unique = true)
     protected String name;
 

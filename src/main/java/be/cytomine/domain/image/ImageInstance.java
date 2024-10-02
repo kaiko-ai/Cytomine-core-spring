@@ -1,5 +1,19 @@
 package be.cytomine.domain.image;
 
+import java.util.Date;
+import java.util.Optional;
+
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.FetchType;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+import javax.validation.constraints.Pattern;
+
 /*
 * Copyright (c) 2009-2022. Authors: see NOTICE file.
 *
@@ -25,10 +39,6 @@ import be.cytomine.utils.JsonObject;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.*;
-import java.util.Date;
-import java.util.Optional;
-
 @Entity
 @Getter
 @Setter
@@ -46,6 +56,7 @@ public class ImageInstance extends CytomineDomain {
     @ManyToOne(fetch = FetchType.LAZY)
     private SecUser user; //owner
 
+    @Pattern(regexp = "^[^\\/:*?'<>|\r\n]+$")
     private String instanceFilename;
 
     private Long countImageAnnotations = 0L;

@@ -18,6 +18,7 @@ package be.cytomine.repository;
 
 import javax.persistence.EntityManager;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class UserAnnotationListing extends AnnotationListing {
@@ -116,7 +117,7 @@ public class UserAnnotationListing extends AnnotationListing {
      * Generate SQL string for FROM
      * FROM depends on data to print (if image name is aksed, need to join with imageinstance+abstractimage,...)
      */
-    String getFrom() {
+    String getFrom(Map<String, Object> parameters) {
         String from = "FROM user_annotation a ";
         String where = "WHERE true\n";
 
@@ -182,7 +183,7 @@ public class UserAnnotationListing extends AnnotationListing {
         return from + "\n" + where;
     }
 
-    String buildExtraRequest() {
+    String buildExtraRequest(Map<String, Object> parameters) {
         return "";
     }
 

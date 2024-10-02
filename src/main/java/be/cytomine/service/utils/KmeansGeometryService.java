@@ -69,28 +69,31 @@ public class KmeansGeometryService {
         );
 
 
-    public List<Kmeans> doKeamsFullRequest(String request) {
+    public List<Kmeans> doKeamsFullRequest(String request, Map<String, Object> parameters) {
         String requestKmeans = "SELECT kmeans, count(*), st_astext(ST_ConvexHull(ST_Collect(location))) \n" +
                 "FROM (\n" + request +"\n" +") AS ksub\n" +
                 "GROUP BY kmeans\n" +
                 "ORDER BY kmeans;";
-        return selectAnnotationLightKmeans(requestKmeans);
+        return selectAnnotationLightKmeans(requestKmeans, parameters);
     }
 
-    public List<Kmeans> doKeamsSoftRequest(String request) {
+    public List<Kmeans> doKeamsSoftRequest(String request, Map<String, Object> parameters) {
         String requestKmeans = "SELECT kmeans, count(*), st_astext(ST_Centroid(ST_Collect(location))) \n" +
                 "FROM (\n" + request +"\n" +") AS ksub\n" +
                 "GROUP BY kmeans\n" +
                 "ORDER BY kmeans;";
-        return selectAnnotationLightKmeans(requestKmeans);
+        return selectAnnotationLightKmeans(requestKmeans, parameters);
     }
 
-    private List<Kmeans> selectAnnotationLightKmeans(String request) {
+    private List<Kmeans> selectAnnotationLightKmeans(String request, Map<String, Object> parameters) {
         List<Kmeans> data = new ArrayList<>();
 
         double max = 1;
 
         Query nativeQuery = entityManager.createNativeQuery(request, Tuple.class);
+        for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+            nativeQuery.setParameter(entry.getKey(), entry.getValue());
+        }
         List<Tuple> resultList = nativeQuery.getResultList();
         for (Tuple tuple : resultList) {
             Kmeans kmeans = new Kmeans();

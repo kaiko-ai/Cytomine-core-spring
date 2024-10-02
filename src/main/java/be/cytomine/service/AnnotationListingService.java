@@ -26,6 +26,8 @@ import be.cytomine.service.security.SecurityACLService;
 import be.cytomine.service.utils.KmeansGeometryService;
 import be.cytomine.utils.GisUtils;
 import be.cytomine.utils.JsonObject;
+import liquibase.pro.packaged.f;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -74,12 +76,13 @@ public class AnnotationListingService  {
     }
 
     public List executeRequest(AnnotationListing al) {
+        Map<String, Object> parameters = new LinkedHashMap<>();
         if(al.getKmeansValue()==KmeansGeometryService.FULL) {
             return selectGenericAnnotation(al);
         } else if(al.getKmeansValue()==KmeansGeometryService.KMEANSFULL) {
-            return kmeansGeometryService.doKeamsFullRequest(al.getAnnotationsRequest());
+            return kmeansGeometryService.doKeamsFullRequest(al.getAnnotationsRequest(parameters), parameters);
         } else {
-            return kmeansGeometryService.doKeamsSoftRequest(al.getAnnotationsRequest());
+            return kmeansGeometryService.doKeamsSoftRequest(al.getAnnotationsRequest(parameters), parameters);
         }
     }
 
@@ -96,7 +99,8 @@ public class AnnotationListingService  {
         boolean first = true;
 
         List<String> realColumn = new ArrayList<>();
-        String request = al.getAnnotationsRequest();
+        Map<String, Object> parameters = new LinkedHashMap<>();
+        String request = al.getAnnotationsRequest(parameters);
 
         boolean termAsked = false;
         boolean trackAsked = false;
@@ -105,6 +109,9 @@ public class AnnotationListingService  {
 
 
         Query nativeQuery = entityManager.createNativeQuery(request, Tuple.class);
+        for (Map.Entry<String, Object> entry : parameters.entrySet()) {
+            nativeQuery.setParameter(entry.getKey(), entry.getValue());
+        }
         List<Tuple> resultList = nativeQuery.getResultList();
 
         for (Tuple rowResult : resultList) {

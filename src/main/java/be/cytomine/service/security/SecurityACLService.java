@@ -181,8 +181,12 @@ public class SecurityACLService {
                             "from AclObjectIdentity as aclObjectId, AclEntry as aclEntry, AclSid as aclSid,  Storage as storage "+
                             "where aclObjectId.objectId = storage.id " +
                             "and aclEntry.aclObjectIdentity = aclObjectId "+
-                            "and aclEntry.sid = aclSid and aclSid.sid like '"+user.getUsername() +"'" + (StringUtils.isNotBlank(searchString)? " and lower(storage.name) like '%" + searchString.toLowerCase() + "%'" : ""));
+                            "and aclEntry.sid = aclSid and aclSid.sid like :username " + (StringUtils.isNotBlank(searchString)? " and lower(storage.name) like :searchString" : ""));
 
+            query.setParameter("username", user.getUsername());
+            if(StringUtils.isNotBlank(searchString)) {
+                query.setParameter("searchString", searchString.toLowerCase());
+            }
         }
         return (List<Storage>) query.getResultList();
     }
@@ -198,8 +202,12 @@ public class SecurityACLService {
                             "from AclObjectIdentity as aclObjectId, AclEntry as aclEntry, AclSid as aclSid,  Project as project "+
                             "where aclObjectId.objectId = project.id " +
                             "and aclEntry.aclObjectIdentity = aclObjectId "+
-                            (ontology!=null? "and project.ontology.id = " + ontology.getId() : " ") +
-                            "and aclEntry.sid = aclSid and aclSid.sid like '"+user.getUsername() +"'");
+                            (ontology!=null? "and project.ontology.id = :ontology " : " ") +
+                            "and aclEntry.sid = aclSid and aclSid.sid like :username ");
+            if(ontology != null) {
+                query.setParameter("ontology", ontology.getId());
+            }
+            query.setParameter("username", user.getUsername());
             return query.getResultList();
         }
     }
@@ -214,7 +222,8 @@ public class SecurityACLService {
                         "from AclObjectIdentity as aclObjectId, AclEntry as aclEntry, AclSid as aclSid,  Project as project "+
                         "where aclObjectId.objectId = project.id " +
                         "and aclEntry.aclObjectIdentity = aclObjectId "+
-                        "and aclEntry.sid = aclSid and project.id = " + project.getId());
+                        "and aclEntry.sid = aclSid and project.id = :project_id ");
+        query.setParameter("project_id", project.getId());
         List<String> usernames = query.getResultList();
         return usernames;
     }
@@ -227,7 +236,8 @@ public class SecurityACLService {
                         "from AclObjectIdentity as aclObjectId, AclEntry as aclEntry, AclSid as aclSid,  Ontology as ontology "+
                         "where aclObjectId.objectId = ontology.id " +
                         "and aclEntry.aclObjectIdentity = aclObjectId "+
-                        "and aclEntry.sid = aclSid and aclSid.sid like '"+user.getUsername() +"'");
+                        "and aclEntry.sid = aclSid and aclSid.sid like :username ");
+        query.setParameter("username", user.getUsername());
         List<Ontology> ontologies = query.getResultList();
         return ontologies;
     }

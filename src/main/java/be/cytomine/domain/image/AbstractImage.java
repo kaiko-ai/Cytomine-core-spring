@@ -26,6 +26,8 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.Pattern;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,7 @@ public class AbstractImage extends CytomineDomain {
     @ManyToOne(fetch = FetchType.EAGER)
     private UploadedFile uploadedFile;
 
+    @Pattern(regexp = "^[^\\/:*?'<>|\r\n]+$")
     private String originalFilename;
 
     @Min(1)

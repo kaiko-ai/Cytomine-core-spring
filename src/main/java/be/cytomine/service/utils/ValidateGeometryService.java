@@ -67,7 +67,6 @@ public class ValidateGeometryService {
                 if (!geom.isValid() || geom.isEmpty()) {
                     //if not valid after buffer(0) or empty after buffer 0
                     //user_image already filter nested image
-
                     log.info("Geometry is not valid, even after a buffer(0)!");
                     String request = "SELECT ST_AsText(ST_MakeValid(ST_AsText('" + backupLocation + "')))";
                     log.info(request);

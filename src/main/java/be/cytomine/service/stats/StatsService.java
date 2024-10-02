@@ -143,14 +143,23 @@ public class StatsService {
 
         String request = "SELECT created " +
                 "FROM UserAnnotation " +
-                "WHERE project.id = " + project.getId() + " " +
-                (term!=null ? "AND id IN (SELECT userAnnotation.id FROM AnnotationTerm WHERE term = " + term.getId() + ") " : "") +
-                (startDate!=null ? " AND created > '"+startDate+"'" : "") +
-                (endDate!=null ? " AND created < '"+endDate+"'" : "") +
+                "WHERE project.id = :project_id " +
+                (term!=null ? "AND id IN (SELECT userAnnotation.id FROM AnnotationTerm WHERE term = :term_id) " : "") +
+                (startDate!=null ? " AND created > :startDate " : "") +
+                (endDate!=null ? " AND created < :endDate " : "") +
                 " ORDER BY created ASC";
-
-
-        List<Date> annotationsDates = entityManager.createQuery(request, Date.class).getResultList();
+        javax.persistence.Query query = entityManager.createQuery(request, Date.class);
+        if(startDate!=null) {
+            query.setParameter("startDate", startDate);
+        }
+        if(endDate!=null) {
+            query.setParameter("endDate", endDate);
+        }
+        if(term!=null) {
+            query.setParameter("term_id", term.getId());
+        }
+        query.setParameter("project_id", project.getId());
+        List<Date> annotationsDates = query.getResultList();
 
         List<JsonObject> data = aggregateByPeriods(annotationsDates, daysRange, (startDate==null ? project.getCreated() : startDate), (endDate==null ? new Date() : endDate), accumulate);
         if(reverseOrder) {
@@ -165,13 +174,23 @@ public class StatsService {
 
         String request = "SELECT created " +
                 "FROM AlgoAnnotation " +
-                "WHERE project.id = " + project.getId() + " " +
-                (term!=null ? "AND id IN (SELECT annotationIdent FROM AlgoAnnotationTerm WHERE term = " + term.getId() + ") " : "") +
-                (startDate!=null ? "AND created > '"+startDate+"'" : "") +
-                (endDate!=null ? "AND created < '"+endDate+"'" : "") +
+                "WHERE project.id = :project_id " +
+                (term!=null ? "AND id IN (SELECT annotationIdent FROM AlgoAnnotationTerm WHERE term = :term_id) " : "") +
+                (startDate!=null ? "AND created > :startDate " : "") +
+                (endDate!=null ? "AND created < :endDate " : "") +
                 "ORDER BY created ASC";
-
-        List<Date> annotationsDates = entityManager.createQuery(request, Date.class).getResultList();
+        javax.persistence.Query query = entityManager.createQuery(request, Date.class);
+        if(startDate!=null) {
+            query.setParameter("startDate", startDate);
+        }
+        if(endDate!=null) {
+            query.setParameter("endDate", endDate);
+        }
+        if(term!=null) {
+            query.setParameter("term_id", term.getId());
+        }
+        query.setParameter("project_id", project.getId());
+        List<Date> annotationsDates = query.getResultList();
 
         List<JsonObject> data = aggregateByPeriods(annotationsDates, daysRange, (startDate==null ? project.getCreated() : startDate), (endDate==null ? new Date() : endDate), accumulate);
         if(reverseOrder) {
@@ -186,13 +205,25 @@ public class StatsService {
 
         String request = "SELECT created " +
                 "FROM reviewed_annotation " +
-                "WHERE project_id = " + project.getId() + " " +
-                (term!=null ? "AND id IN (SELECT reviewed_annotation_terms_id FROM reviewed_annotation_term WHERE term_id = " + term.getId() + ") " : "") +
-                (startDate!=null ? "AND created > '"+startDate+"'" : "") +
-                (endDate!=null ? "AND created < '"+endDate+"'" : "") +
+                "WHERE project_id = :project_id " +
+                (term!=null ? "AND id IN (SELECT reviewed_annotation_terms_id FROM reviewed_annotation_term WHERE term_id = :term_id) " : "") +
+                (startDate!=null ? "AND created > :startDate " : "") +
+                (endDate!=null ? "AND created < :endDate " : "") +
                 "ORDER BY created ASC";
 
-        List<java.util.Date> annotationsDates = entityManager.createNativeQuery(request).getResultList();
+        javax.persistence.Query query = entityManager.createNativeQuery(request);
+        if(startDate!=null) {
+            query.setParameter("startDate", startDate);
+        }
+        if(endDate!=null) {
+            query.setParameter("endDate", endDate);
+        }
+        if(term!=null) {
+            query.setParameter("term_id", term.getId());
+        }
+        query.setParameter("project_id", project.getId());
+
+        List<java.util.Date> annotationsDates = query.getResultList();
 
         List<JsonObject> data = aggregateByPeriods(annotationsDates, daysRange, (startDate==null ? project.getCreated() : startDate), (endDate==null ? new Date() : endDate), accumulate);
         if(reverseOrder) {
@@ -265,12 +296,19 @@ public class StatsService {
                 "FROM user_annotation ua " +
                 "LEFT JOIN annotation_term at " +
                 "ON at.user_annotation_id = ua.id " +
-                "WHERE ua.project_id = "+project.getId() +" " +
-                (startDate!=null ? "AND at.created > '"+startDate+"'" : "") +
-                (endDate!=null ? "AND at.created < '"+endDate+"'" : "") +
+                "WHERE ua.project_id = :project_id " +
+                (startDate!=null ? "AND at.created > :startDate " : "") +
+                (endDate!=null ? "AND at.created < :endDate " : "") +
                 "GROUP BY at.term_id ";
-
-        List<Tuple> rows = entityManager.createNativeQuery(request, Tuple.class).getResultList();
+        javax.persistence.Query query = entityManager.createNativeQuery(request, Tuple.class);
+        if(startDate!=null) {
+            query.setParameter("startDate", startDate);
+        }
+        if(endDate!=null) {
+            query.setParameter("endDate", endDate);
+        }
+        query.setParameter("project_id", project.getId());
+        List<Tuple> rows = query.getResultList();
 
         for (Tuple row : rows) {
             JsonObject value = result.get(row.get(0)==null ? 0L : ((BigInteger)row.get(0)).longValue());
@@ -291,13 +329,20 @@ public class StatsService {
                 "SELECT ua.image_id, at.term_id, COUNT(ua.id) as count  " +
                 "FROM user_annotation ua " +
                 "LEFT JOIN annotation_term at ON at.user_annotation_id = ua.id " +
-                "WHERE ua.deleted is NULL and at.deleted is NULL and ua.project_id = "  +project.getId() + " "+
-                (startDate!=null ? "AND at.created > '"+startDate+"'" : "") +
-                (endDate!=null ? "AND at.created < '"+endDate+"'" : "") +
+                "WHERE ua.deleted is NULL and at.deleted is NULL and ua.project_id = :project_id "+
+                (startDate!=null ? "AND at.created > :startDate " : "") +
+                (endDate!=null ? "AND at.created < :endDate " : "") +
                 "GROUP BY ua.image_id, at.term_id " +
                 "ORDER BY ua.image_id, at.term_id ";
-
-        List<Tuple> rows = entityManager.createNativeQuery(request, Tuple.class).getResultList();
+        javax.persistence.Query query = entityManager.createNativeQuery(request, Tuple.class);
+        if(startDate!=null) {
+            query.setParameter("startDate", startDate);
+        }
+        if(endDate!=null) {
+            query.setParameter("endDate", endDate);
+        }
+        query.setParameter("project_id", project.getId());
+        List<Tuple> rows = query.getResultList();
 
         for (Tuple row : rows) {
             JsonObject value = JsonObject.of(
@@ -340,12 +385,19 @@ public class StatsService {
                 "FROM user_annotation ua " +
                 "LEFT JOIN annotation_term at " +
                 "ON at.user_annotation_id = ua.id " +
-                "WHERE ua.project_id = "+project.getId()+" " +
-                (startDate!=null ? "AND at.created > '"+startDate+"'" : "") +
-                (endDate!=null ? "AND at.created < '"+endDate+"'" : "") +
+                "WHERE ua.project_id = :project_id " +
+                (startDate!=null ? "AND at.created > :startDate " : "") +
+                (endDate!=null ? "AND at.created < :endDate " : "") +
                 "GROUP BY at.term_id ";
-
-        List<Tuple> rows = entityManager.createNativeQuery(request, Tuple.class).getResultList();
+        javax.persistence.Query query = entityManager.createNativeQuery(request, Tuple.class);
+        if(startDate!=null) {
+            query.setParameter("startDate", startDate);
+        }
+        if(endDate!=null) {
+            query.setParameter("endDate", endDate);
+        }
+        query.setParameter("project_id", project.getId());
+        List<Tuple> rows = query.getResultList();
         for (Tuple row : rows) {
             if (row.get(0) == null) {
                 stats.put("0", ((BigInteger)row.get(1)).longValue());

@@ -341,6 +341,7 @@ public class ImageInstanceService extends ModelService {
         String select, from, where, search, sort;
         String request;
 
+        // TODO: Check query security
         select = "SELECT distinct " + imageInstanceAlias + ".* ";
         from = "FROM user_image "+ imageInstanceAlias + " ";
         where = "WHERE user_image_id = " + user.getId() + " ";
@@ -439,7 +440,7 @@ public class ImageInstanceService extends ModelService {
             object.put("projectName", result.get("projectName"));
             results.add(result);
         }
-
+        // TODO: Check query security
         request = "SELECT COUNT(DISTINCT " + imageInstanceAlias + ".id) " + from + where + search;
         query = session.createNativeQuery(request);
         for (Map.Entry<String, Object> entry : mapParams.entrySet()) {

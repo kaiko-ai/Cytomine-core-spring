@@ -18,6 +18,7 @@ package be.cytomine.repository;
 
 import javax.persistence.EntityManager;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class RoiAnnotationListing extends AnnotationListing {
@@ -92,7 +93,7 @@ public class RoiAnnotationListing extends AnnotationListing {
      * Generate SQL string for FROM
      * FROM depends on data to print (if image name is aksed, need to join with imageinstance+abstractimage,...)
      */
-    String getFrom() {
+    String getFrom(Map<String, Object> parameters) {
 
         String from = "FROM roi_annotation a ";
         String where = "WHERE true\n";
@@ -110,7 +111,8 @@ public class RoiAnnotationListing extends AnnotationListing {
         }
 
         if (tags != null) {
-            from += " LEFT OUTER JOIN tag_domain_association tda ON a.id = tda.domain_ident AND tda.domain_class_name = '" + getDomainClass() + "' ";
+            parameters.put("domainClassRoi", getDomainClass());
+            from += " LEFT OUTER JOIN tag_domain_association tda ON a.id = tda.domain_ident AND tda.domain_class_name = :domainClassRoi ";
         }
 
         return from + "\n" + where;
@@ -127,7 +129,7 @@ public class RoiAnnotationListing extends AnnotationListing {
         }
     }
 
-    String buildExtraRequest() {
+    String buildExtraRequest(Map<String, Object> parameters) {
         columnsToPrint.remove("term");
         return "";
     }

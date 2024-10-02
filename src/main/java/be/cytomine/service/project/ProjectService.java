@@ -355,7 +355,7 @@ public class ProjectService extends ModelService {
                     "JOIN acl_object_identity as aclObjectId ON aclObjectId.object_id_identity = p.id " +
                     "JOIN acl_entry as aclEntry ON aclEntry.acl_object_identity = aclObjectId.id " +
                     "JOIN acl_sid as aclSid ON aclEntry.sid = aclSid.id ";
-            where = "WHERE aclSid.sid like '"+user.getUsername()+"' ";
+            where = "WHERE aclSid.sid like :username ";
         }
         else {
             select = "SELECT DISTINCT(p.id) as distinctId, p.* ";
@@ -476,6 +476,9 @@ public class ProjectService extends ModelService {
         }
 
         Query query = getEntityManager().createNativeQuery(request, Tuple.class);
+        if (user!=null) {
+            query.setParameter("username", user.getUsername());
+        }
         Map<String, Object> mapParams = sqlSearchConditions.getSqlParameters();
         for (Map.Entry<String, Object> entry : mapParams.entrySet()) {
             query.setParameter(entry.getKey(), entry.getValue());
@@ -522,6 +525,9 @@ public class ProjectService extends ModelService {
         query = getEntityManager().createNativeQuery(request);
         for (Map.Entry<String, Object> entry : mapParams.entrySet()) {
             query.setParameter(entry.getKey(), entry.getValue());
+        }
+        if (user!=null) {
+            query.setParameter("username", user.getUsername());
         }
         long count = ((BigInteger)query.getResultList().get(0)).longValue();
         Page<JsonObject> page = PageUtils.buildPageFromPageResults(results, max, offset, count);

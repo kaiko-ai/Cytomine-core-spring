@@ -27,6 +27,8 @@ import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
 
 import javax.persistence.*;
+import javax.validation.constraints.Pattern;
+
 import java.util.Set;
 
 @Entity
@@ -34,6 +36,7 @@ import java.util.Set;
 @Setter
 public class Project extends CytomineDomain {
 
+    @Pattern(regexp = "^[\\p{L}0-9]+([\\s-][\\p{L}0-9]+)*$")
     private String name;
 
     @ManyToOne(fetch = FetchType.EAGER)

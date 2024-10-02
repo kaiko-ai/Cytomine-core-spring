@@ -25,6 +25,8 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+
 import java.io.Serializable;
 
 @Entity
@@ -35,6 +37,7 @@ public class SecRole extends CytomineDomain implements Serializable {
     @NotNull
     @NotBlank
     @Column(unique = true)
+    @Pattern(regexp = "^[a-zA-Z0-9\\s]+$")
     private String authority;
 
     public static JsonObject getDataFromDomain(CytomineDomain domain) {

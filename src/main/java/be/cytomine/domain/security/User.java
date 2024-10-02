@@ -27,6 +27,7 @@ import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 @Entity
@@ -43,11 +44,13 @@ public class User extends SecUser {
     @NotNull
     @NotBlank
     @Column(nullable = false)
+    @Pattern(regexp = "^[\\p{L}0-9]+([\\s-][\\p{L}0-9]+)*$")
     protected String firstname;
 
     @NotNull
     @NotBlank
     @Column(nullable = false)
+    @Pattern(regexp = "^[\\p{L}0-9]+([\\s-][\\p{L}0-9]+)*$")
     protected String lastname;
 
     @NotNull

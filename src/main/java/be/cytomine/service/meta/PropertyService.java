@@ -31,6 +31,8 @@ import be.cytomine.utils.CommandResponse;
 import be.cytomine.utils.JsonObject;
 import be.cytomine.utils.ResourcesUtils;
 import be.cytomine.utils.Task;
+import liquibase.pro.packaged.p;
+
 import com.vividsolutions.jts.geom.Geometry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,7 @@ import javax.persistence.Query;
 import javax.persistence.Tuple;
 import javax.transaction.Transactional;
 import java.util.*;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 import static be.cytomine.utils.SQLUtils.castToLong;
@@ -174,29 +177,34 @@ public class PropertyService extends ModelService {
         } else {
             securityACLService.check(image.container(),READ);
         }
-
         String request = "SELECT DISTINCT p.key " +
                 (withUser? ", ua.user_id " : "") +
                 "FROM property as p, user_annotation as ua " +
                 "WHERE p.domain_ident = ua.id " +
-                (project!=null? "AND ua.project_id = '"+ project.getId() + "' " : "") +
-                (image!=null? "AND ua.image_id = '"+ image.getId() + "' " : "") +
+                (project!=null? "AND ua.project_id = :project_id " : "") +
+                (image!=null? "AND ua.image_id = :image_id " : "") +
                 "UNION " +
                 "SELECT DISTINCT p1.key " +
                 (withUser? ", aa.user_id " : "") +
                 "FROM property as p1, algo_annotation as aa " +
                 "WHERE p1.domain_ident = aa.id " +
-                (project!=null? "AND aa.project_id = '"+ project.getId() + "' " : "") +
-                (image!=null? "AND aa.image_id = '"+ image.getId() + "' " : "") +
+                (project!=null? "AND aa.project_id = :project_id " : "") +
+                (image!=null? "AND aa.image_id = :image_id " : "") +
                 "UNION " +
                 "SELECT DISTINCT p2.key " +
                 (withUser? ", ra.user_id " : "") +
                 "FROM property as p2, reviewed_annotation as ra " +
                 "WHERE p2.domain_ident = ra.id " +
-                (project!=null? "AND ra.project_id = '"+ project.getId() + "' " : "") +
-                (image!=null? "AND ra.image_id = '"+ image.getId() + "' " : "");
-
-        return  selectListKeyWithUser(request, Map.of());
+                (project!=null? "AND ra.project_id = :project_id " : "") +
+                (image!=null? "AND ra.image_id = :image_id " : "");
+        Map<String, Object> parameters = new HashMap<>();
+        if(image!=null) {
+            parameters.put("image_id", image.getId());
+        }
+        if(project!=null) {
+            parameters.put("project_id", project.getId());
+        }
+        return  selectListKeyWithUser(request, parameters);
     }
 
     public List<String> listKeysForImageInstance(Project project) {
@@ -218,19 +226,25 @@ public class PropertyService extends ModelService {
                 "FROM user_annotation ua, property as p " +
                 "WHERE p.domain_ident = ua.id " +
                 "AND p.key = :key " +
-                "AND ua.image_id = '"+ image.getId() +"' " +
-                "AND ua.user_id = '"+ user.getId() +"' " +
-                (boundingbox!=null ? "AND ST_Intersects(ua.location,ST_GeometryFromText('" + boundingbox.toString() + "',0)) " :"") +
+                "AND ua.image_id = :image_id " +
+                "AND ua.user_id = :user_id " +
+                (boundingbox!=null ? "AND ST_Intersects(ua.location,ST_GeometryFromText(:bounding_box,0)) " :"") +
                 "UNION " +
                 "SELECT DISTINCT aa.id, ST_X(ST_CENTROID(aa.location)) as x,ST_Y(ST_CENTROID(aa.location)) as y, p.value " +
                 "FROM algo_annotation aa, property as p " +
                 "WHERE p.domain_ident = aa.id " +
                 "AND p.key = :key " +
-                "AND aa.image_id = '"+ image.getId() +"' " +
-                "AND aa.user_id = '"+ user.getId() +"' " +
-                (boundingbox!=null ? "AND ST_Intersects(aa.location,ST_GeometryFromText('" + boundingbox.toString() + "',0)) " :"");
-
-        return selectsql(request, Map.of("key", (Object)key));
+                "AND aa.image_id = :image_id " +
+                "AND aa.user_id = :user_id " +
+                (boundingbox!=null ? "AND ST_Intersects(aa.location,ST_GeometryFromText(:bounding_box,0)) " :"");
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("key", key);
+        if(boundingbox!=null) {
+            parameters.put("bounding_box", boundingbox.toString());
+        }
+        parameters.put("user_id", user.getId());
+        parameters.put("image_id", image.getId());
+        return selectsql(request, parameters);
     }
 
     private List<String> selectListkey(String request, Map<String, Object> parameters) {
