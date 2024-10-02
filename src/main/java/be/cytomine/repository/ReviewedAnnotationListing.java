@@ -160,7 +160,6 @@ public class ReviewedAnnotationListing extends AnnotationListing {
     }
 
     String buildExtraRequest(Map<String, Object> parameters) {
-        // TODO: Protect query
 
         if (kmeansValue == 3 && image != null && bbox != null) {
             /**
@@ -203,7 +202,8 @@ public class ReviewedAnnotationListing extends AnnotationListing {
                     "WHERE ga.id=a.id " +
                     "AND ga.id<>gb.id " +
                     "AND ga.image_id=gb.image_id " +
-                    "AND ST_Intersects(gb.location,ST_GeometryFromText('" + bbox + "',0)))\n";
+                    "AND ST_Intersects(gb.location,ST_GeometryFromText(:bbox_subRequest,0)))\n";
+            parameters.put("bbox_subRequest", bbox);
 
             //orderBy = ['numberOfCoveringAnnotation':'asc','id':'asc']
             orderBy = new LinkedHashMap<>(Map.of("id", "desc"));

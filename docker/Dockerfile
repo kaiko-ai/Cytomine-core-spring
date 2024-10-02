@@ -2,8 +2,7 @@ ARG CORE_VERSION
 ARG CORE_REVISION
 ARG ENTRYPOINT_SCRIPTS_VERSION=1.3.0
 ARG GRADLE_VERSION=7.2-jdk17-alpine
-ARG OPENJDK_VERSION=17-slim-bullseye
-
+ARG OPENJDK_VERSION=23-ea-17-slim-bookworm
 
 #######################################################################################
 # Stage: core dependencies download via gradle
@@ -93,7 +92,7 @@ ENV LANG C.UTF-8
 # base librairies and configuration
 RUN apt-get update -y \
     && apt-get install --no-install-recommends --no-install-suggests -y \
-      logrotate=3.18* \
+      logrotate=3.21* \
       gettext=0.21* \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i "/su root syslog/c\su root root" /etc/logrotate.conf

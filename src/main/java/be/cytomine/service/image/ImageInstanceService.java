@@ -344,7 +344,7 @@ public class ImageInstanceService extends ModelService {
         // TODO: Check query security
         select = "SELECT distinct " + imageInstanceAlias + ".* ";
         from = "FROM user_image "+ imageInstanceAlias + " ";
-        where = "WHERE user_image_id = " + user.getId() + " ";
+        where = "WHERE user_image_id = :user_id ";
         search = "";
 
         if (!imageInstanceCondition.isBlank()) {
@@ -407,6 +407,7 @@ public class ImageInstanceService extends ModelService {
 
         Session session = entityManager.unwrap(Session.class);
         NativeQuery query = session.createNativeQuery(request, Tuple.class);
+        query.setParameter("user_id", user.getId());
         Map<String, Object> mapParams = sqlSearchConditions.getSqlParameters();
         if(nameSearch!=null){
             mapParams.put("name", nameSearch.getValue());
@@ -440,9 +441,9 @@ public class ImageInstanceService extends ModelService {
             object.put("projectName", result.get("projectName"));
             results.add(result);
         }
-        // TODO: Check query security
         request = "SELECT COUNT(DISTINCT " + imageInstanceAlias + ".id) " + from + where + search;
         query = session.createNativeQuery(request);
+        query.setParameter("user_id", user.getId());
         for (Map.Entry<String, Object> entry : mapParams.entrySet()) {
             query.setParameter(entry.getKey(), entry.getValue());
         }
