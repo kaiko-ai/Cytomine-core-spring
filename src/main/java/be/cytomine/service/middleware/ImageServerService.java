@@ -25,6 +25,7 @@ import be.cytomine.domain.ontology.AnnotationDomain;
 import be.cytomine.dto.PimsResponse;
 import be.cytomine.exceptions.*;
 import be.cytomine.repository.middleware.ImageServerRepository;
+import be.cytomine.security.jwt.JwtTokenGenerator;
 import be.cytomine.service.CurrentUserService;
 import be.cytomine.service.ModelService;
 import be.cytomine.service.UrlApi;
@@ -856,6 +857,10 @@ public class ImageServerService extends ModelService {
             for (Map.Entry<String, Object> entry : headers.entrySet()) {
                 requestBuilder.setHeader(entry.getKey(), (String) entry.getValue());
             }
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("application", "core");
+            Map<String, Object> tokenData = JwtTokenGenerator.generateJwtToken(applicationProperties, payload);
+            requestBuilder.setHeader("Authorization", "Bearer "+tokenData.get("token"));
             HttpRequest request = requestBuilder.build();
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
             return processResponse(fullUrl, responseContentType, response);

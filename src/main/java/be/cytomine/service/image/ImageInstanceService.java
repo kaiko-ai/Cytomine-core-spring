@@ -341,7 +341,6 @@ public class ImageInstanceService extends ModelService {
         String select, from, where, search, sort;
         String request;
 
-        // TODO: Check query security
         select = "SELECT distinct " + imageInstanceAlias + ".* ";
         from = "FROM user_image "+ imageInstanceAlias + " ";
         where = "WHERE user_image_id = :user_id ";

@@ -18,6 +18,7 @@ package be.cytomine.domain.image;
 
 import be.cytomine.domain.CytomineDomain;
 import be.cytomine.domain.project.Project;
+import be.cytomine.security.jwt.JwtTokenGenerator;
 import be.cytomine.utils.JsonObject;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +28,9 @@ import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import java.io.Serializable;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Entity
@@ -58,9 +62,8 @@ public class SliceInstance extends CytomineDomain implements Serializable {
 
     public static JsonObject getDataFromDomain(CytomineDomain domain) {
         JsonObject returnArray = CytomineDomain.getDataFromDomain(domain);
-        SliceInstance sliceInstance = (SliceInstance) domain;
+        SliceInstance sliceInstance = (SliceInstance) domain;;
         returnArray.put("uploadedFile", Optional.ofNullable(sliceInstance.baseSlice).map(AbstractSlice::getUploadedFileId).orElse(null));
-
         returnArray.put("imageServerUrl", sliceInstance.getImageServerUrl());
         returnArray.put("project", Optional.ofNullable(sliceInstance.project).map(CytomineDomain::getId).orElse(null));
         returnArray.put("baseSlice", Optional.ofNullable(sliceInstance.baseSlice).map(CytomineDomain::getId).orElse(null));

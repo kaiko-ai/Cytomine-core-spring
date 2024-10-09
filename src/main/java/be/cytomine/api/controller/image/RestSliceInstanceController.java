@@ -17,9 +17,11 @@ package be.cytomine.api.controller.image;
 */
 
 import be.cytomine.api.controller.RestCytomineController;
+import be.cytomine.config.properties.ApplicationProperties;
 import be.cytomine.domain.image.ImageInstance;
 import be.cytomine.domain.image.SliceInstance;
 import be.cytomine.exceptions.ObjectNotFoundException;
+import be.cytomine.security.jwt.JwtTokenGenerator;
 import be.cytomine.service.dto.CropParameter;
 import be.cytomine.service.dto.ImageParameter;
 import be.cytomine.service.dto.WindowParameter;
@@ -35,6 +37,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -56,6 +63,8 @@ public class RestSliceInstanceController extends RestCytomineController {
 
     private final ImagePropertiesService imagePropertiesService;
 
+    private final ApplicationProperties applicationProperties;
+
 
     @GetMapping("/imageinstance/{id}/sliceinstance.json")
     public ResponseEntity<String> listByImageInstance(
@@ -64,7 +73,30 @@ public class RestSliceInstanceController extends RestCytomineController {
         log.debug("REST request to list slice instance for image {}", id);
         ImageInstance imageInstance = imageInstanceService.find(id)
                 .orElseThrow(() -> new ObjectNotFoundException("ImageInstance", id));
-        return responseSuccess(sliceInstanceService.list(imageInstance));
+        List<SliceInstance> sliceInstances = sliceInstanceService.list(imageInstance);
+        List<JsonObject> jsonArray = new ArrayList<JsonObject>(); // Use JsonArray to hold the list of JSON objects
+        for (SliceInstance sliceInstance : sliceInstances) {
+            jsonArray.add(addToken(sliceInstance)); 
+        }
+        return responseSuccess(jsonArray);
+    }
+
+    private JsonObject addToken(SliceInstance sliceInstance) {
+        // Injects a temporary token for the slice instance to be able to access the image
+        // directly from the image server
+        JsonObject returnArray = sliceInstance.toJsonObject();
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("filepath", sliceInstance.getPath());
+        // Generate the token and expiry time
+        Map<String, Object> tokenData = JwtTokenGenerator.generateJwtToken(applicationProperties, payload);
+        String token = (String) tokenData.get("token");
+        Instant expiryTime = (Instant) tokenData.get("expiryTime");
+        returnArray.put("temporaryToken", token);
+        return returnArray;
+    }
+
+    private ResponseEntity<String> responseWithToken(SliceInstance sliceInstance) {
+        return responseSuccess(addToken(sliceInstance).toJsonString());
     }
 
 
@@ -74,7 +106,7 @@ public class RestSliceInstanceController extends RestCytomineController {
     ) {
         log.debug("REST request to get slice instance {}", id);
         return sliceInstanceService.find(id)
-                .map(this::responseSuccess)
+                .map(this::responseWithToken)
                 .orElseThrow(() -> new ObjectNotFoundException("SliceInstance", id));
     }
 
@@ -92,7 +124,7 @@ public class RestSliceInstanceController extends RestCytomineController {
 
         SliceInstance sliceInstance = sliceInstanceService.find(imageInstance, channel,zStack, time)
                 .orElseThrow(() -> new ObjectNotFoundException("SliceInstance", id + "[" + channel + "-" + zStack + "-" + time + "]"));
-        return responseSuccess(sliceInstance);
+        return responseWithToken(sliceInstance);
     }
     
     @PostMapping("/sliceinstance.json")
