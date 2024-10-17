@@ -37,7 +37,7 @@ public class SecRole extends CytomineDomain implements Serializable {
     @NotNull
     @NotBlank
     @Column(unique = true)
-    @Pattern(regexp = "^[a-zA-Z0-9\\s]+$")
+    @Pattern(regexp = "^[a-zA-Z0-9\\s_]+$")
     private String authority;
 
     public static JsonObject getDataFromDomain(CytomineDomain domain) {
