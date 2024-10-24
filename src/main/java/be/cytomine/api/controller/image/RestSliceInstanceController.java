@@ -92,6 +92,7 @@ public class RestSliceInstanceController extends RestCytomineController {
         String token = (String) tokenData.get("token");
         Instant expiryTime = (Instant) tokenData.get("expiryTime");
         returnArray.put("temporaryToken", token);
+        returnArray.put("tokenExpiryTime", expiryTime.getEpochSecond());
         return returnArray;
     }
 
