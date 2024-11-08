@@ -277,9 +277,7 @@ public class RestUserController extends RestCytomineController {
             log.info(message + sanitizedJson);
 
         } catch (Exception e) {
-            log.error("Error parsing or sanitizing JSON", e); 
-            // Consider logging the original JSON here for debugging, but carefully 
-            // weigh the security implications.
+            log.error("Error parsing or sanitizing JSON", e);
         }
     }
 
