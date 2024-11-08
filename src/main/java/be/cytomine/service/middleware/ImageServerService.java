@@ -102,13 +102,13 @@ public class ImageServerService extends ModelService {
     }
 
     public StorageStats storageSpace(ImageServer imageServer) throws IOException {
-        return JsonObject.toObject(getContentFromUrl(imageServer.getInternalUrl() + "/storage/size.json"), StorageStats.class);
+        PimsResponse pimsResponse = makeRequest("GET", imageServer.getInternalUrl(), "/storage/size.json", new LinkedHashMap<>(), "json", Map.of());
+        return JsonObject.toObject(new String(pimsResponse.getContent()), StorageStats.class);
     }
 
     public List<Map<String, Object>> formats(ImageServer imageServer) throws IOException {
-        log.debug(imageServer.getInternalUrl() + "/formats");
-        String response = getContentFromUrl(imageServer.getInternalUrl() + "/formats");
-        JsonObject jsonObject = JsonObject.toJsonObject(response);
+        PimsResponse pimsResponse = makeRequest("GET", imageServer.getInternalUrl(), "/formats", new LinkedHashMap<>(), "json", Map.of());
+        JsonObject jsonObject = JsonObject.toJsonObject(new String(pimsResponse.getContent()));
         return ((List<Map<String,Object>>)jsonObject.get("items")).stream().map(x -> StringUtils.keysToCamelCase(x)).toList();
     }
 
@@ -211,13 +211,17 @@ public class ImageServerService extends ModelService {
     }
 
     public Map<String, Object> properties(AbstractImage image) throws IOException {
-        String fullUrl = this.buildImageServerInternalFullUrl(image, "image", "/info");
-        return JsonObject.toMap(getContentFromUrl(fullUrl));
+        String server = image.getImageServerInternalUrl();
+        String uri = this.buildEncodedUri("image", image, "/info");
+        PimsResponse pimsResponse = makeRequest("GET", server, uri, new LinkedHashMap<>(), "json", Map.of());
+        return JsonObject.toMap(new String(pimsResponse.getContent()));
     }
 
     public List<Map<String, Object>> rawProperties(AbstractImage image) throws IOException {
-        String fullUrl = this.buildImageServerInternalFullUrl(image, "image", "/metadata");
-        return JsonObject.toJsonObject(getContentFromUrl(fullUrl)).getJSONAttrListMap("items");
+        String server = image.getImageServerInternalUrl();
+        String uri = this.buildEncodedUri("image", image, "/metadata");
+        PimsResponse pimsResponse = makeRequest("GET", server, uri, new LinkedHashMap<>(), "json", Map.of());
+        return JsonObject.toJsonObject(new String(pimsResponse.getContent())).getJSONAttrListMap("items");
     }
 
     public Map<String, Object> imageHistogram(AbstractImage image, int nBins) {
@@ -370,8 +374,10 @@ public class ImageServerService extends ModelService {
     }
 
     public List<String> associated(AbstractImage image) throws IOException {
-        String fullUrl = this.buildImageServerInternalFullUrl(image, "image", "/info/associated");
-        return JsonObject.toJsonObject(getContentFromUrl(fullUrl)).getJSONAttrListMap("items").stream().map(x -> (String)x.get("name")).toList();
+        String server = image.getImageServerInternalUrl();
+        String uri = this.buildEncodedUri("image", image, "/info/associated");
+        PimsResponse pimsResponse = makeRequest("GET", server, uri, new LinkedHashMap<>(), "json", Map.of());
+        return JsonObject.toJsonObject(new String(pimsResponse.getContent())).getJSONAttrListMap("items").stream().map(x -> (String)x.get("name")).toList();
     }
 
     public List<String> associated(ImageInstance image) throws IOException {

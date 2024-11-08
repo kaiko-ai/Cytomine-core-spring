@@ -47,7 +47,7 @@ public class RestGrantRoleController extends RestCytomineController {
     @GetMapping("/session/admin/open.json")
     public ResponseEntity<String> openAdminSession() {
         HttpSession session = request.getSession();
-        log.debug("REST request to open admin session: " + session.getId());
+        log.info("REST request to open admin session: " + session.getId());
         currentRoleService.activeAdminSession(currentUserService.getCurrentUser());
         return responseSuccess(JsonObject.toJsonString(getCurrentRole()));
     }
@@ -55,7 +55,7 @@ public class RestGrantRoleController extends RestCytomineController {
     @GetMapping("/session/admin/close.json")
     public ResponseEntity<String> closeAdminSession() {
         HttpSession session = request.getSession();
-        log.debug("REST request to close admin session: " + session.getId());
+        log.info("REST request to close admin session: " + session.getId());
         currentRoleService.closeAdminSession(currentUserService.getCurrentUser());
         return responseSuccess(JsonObject.toJsonString(getCurrentRole()));
     }

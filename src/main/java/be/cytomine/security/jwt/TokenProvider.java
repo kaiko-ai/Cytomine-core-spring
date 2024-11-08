@@ -65,7 +65,7 @@ public class TokenProvider {
     public TokenProvider(ApplicationProperties applicationProperties, SecUserRepository secUserRepository) {
         byte[] keyBytes;
         String secret = applicationProperties.getAuthentication().getJwt().getSecret();
-        keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        keyBytes = secret.getBytes(StandardCharsets.UTF_8); 
         this.key = Keys.hmacShaKeyFor(keyBytes);
         jwtParser = Jwts.parserBuilder().setSigningKey(key).build();
         this.secUserRepository = secUserRepository;

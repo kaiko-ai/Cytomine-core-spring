@@ -67,5 +67,6 @@
     <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
         <resetJUL>true</resetJUL>
     </contextListener>
-
+    <!-- Log HTTP requests -->
+    <logger name="org.springframework.web.filter.CommonsRequestLoggingFilter" level="DEBUG"/>
 </configuration>

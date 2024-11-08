@@ -50,6 +50,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
@@ -260,16 +264,35 @@ public class RestUserController extends RestCytomineController {
         return responseSuccess(object);
     }
 
+    private void logUserRedacted(String message, String json) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(json);
+
+            if (rootNode.has("password")) {
+                ((ObjectNode) rootNode).remove("password"); 
+            }
+
+            String sanitizedJson = mapper.writeValueAsString(rootNode);
+            log.info(message + sanitizedJson);
+
+        } catch (Exception e) {
+            log.error("Error parsing or sanitizing JSON", e); 
+            // Consider logging the original JSON here for debugging, but carefully 
+            // weigh the security implications.
+        }
+    }
+
 
     @PostMapping("/user.json")
     public ResponseEntity<String> createUser(@RequestBody String json) {
-        log.debug("REST request to save User : " + json);
+        logUserRedacted("REST request to save User (redacted)", json);
         return add(secUserService, json);
     }
 
     @PutMapping("/user/{id}.json")
     public ResponseEntity<String> updateUser(@PathVariable String id, @RequestBody JsonObject json) {
-        log.debug("REST request to update User : {}", id);
+        logUserRedacted("REST request to update User (redacted)", json.toJsonString());
         return update(secUserService, json);
     }
 
