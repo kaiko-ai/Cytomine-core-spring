@@ -17,6 +17,7 @@ spring:
     hikari:
       poolName: Hikari
       auto-commit: false
+      
 
   jpa:
     database-platform: be.cytomine.config.CustomPostgreSQLDialect

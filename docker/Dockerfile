@@ -94,6 +94,9 @@ RUN apt-get update -y \
     && apt-get install --no-install-recommends --no-install-suggests -y \
       logrotate=3.21* \
       gettext=0.21* \
+      libssl3=3.0.1* \
+      libc-bin=2.36-9+deb12u* \
+      openssl=3.0.1* \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i "/su root syslog/c\su root root" /etc/logrotate.conf
 
